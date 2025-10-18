@@ -1,7 +1,7 @@
 from fastapi import FastAPI,Query,BackgroundTasks
 
 app = FastAPI(title="Flight Booking Simulator with Dynamic Pricing")
-# Comment
+#comment
 # --- Sample flight data ---
 flights = [
     {"id": 1, "airline": "IndiGo", "origin": "HYD", "destination": "BLR", "date": "2025-10-18", "price": 3200},
