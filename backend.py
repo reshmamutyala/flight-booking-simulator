@@ -231,7 +231,7 @@ def get_fare_history(flight_id: int):
     }
 
 
-
+#milestone 3
 """
 Flight Booking Simulator with Dynamic Pricing (FastAPI)
 
