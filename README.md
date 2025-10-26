@@ -33,6 +33,7 @@ my backend file consists of two milestones
  • Base fare and pricing tiers
 5. Integrate dynamic pricing engine into flight search API
 6. Build background process to simulate demand/availability changes
-7. (Optional) Store fare history for tracking changes
+7. Store fare history for tracking changes
 
 the above mentioned are the tasks done in milestone 2
+where my milestone 3 consists of booking workflow and transaction management
