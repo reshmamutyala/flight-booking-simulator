@@ -244,9 +244,6 @@ Features:
 - Concurrency control using threading.Lock (safe multi-user booking)
 - Booking cancellation and history retrieval
 - In-memory data (no external DB required)
-
-Run:
-    uvicorn backend:app --reload
 """
 
 from fastapi import FastAPI, HTTPException
