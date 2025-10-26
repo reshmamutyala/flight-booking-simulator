@@ -1,7 +1,6 @@
 from fastapi import FastAPI,Query,BackgroundTasks
 
 app = FastAPI(title="Flight Booking Simulator with Dynamic Pricing")
-#comment
 # --- Sample flight data ---
 flights = [
     {"id": 1, "airline": "IndiGo", "origin": "HYD", "destination": "BLR", "date": "2025-10-18", "price": 3200},
@@ -230,3 +229,222 @@ def get_fare_history(flight_id: int):
         "airline": flight.airline,
         "price_history": flight.price_history
     }
+
+
+
+"""
+Flight Booking Simulator with Dynamic Pricing (FastAPI)
+
+Milestone 3: Booking Workflow & Transaction Management
+Features:
+- List all flights and view available seats
+- Dynamic pricing (based on seat availability & days left)
+- Multi-step booking (seat selection + passenger info + payment)
+- Unique PNR generation for each booking
+- Concurrency control using threading.Lock (safe multi-user booking)
+- Booking cancellation and history retrieval
+- In-memory data (no external DB required)
+
+Run:
+    uvicorn backend:app --reload
+"""
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
+from datetime import datetime, date
+import threading
+import random
+import uuid
+
+app = FastAPI(title="Flight Booking Simulator with Dynamic Pricing")
+
+flights: Dict[int, dict] = {}
+flight_locks: Dict[int, threading.Lock] = {}
+bookings: Dict[str, dict] = {}
+
+# Create Sample Flights 
+def create_sample_flights():
+    data = [
+        {"id": 1, "airline": "IndiGo", "origin": "HYD", "destination": "BLR", "date": "2025-11-05", "base_price": 3000},
+        {"id": 2, "airline": "Air India", "origin": "HYD", "destination": "DEL", "date": "2025-11-10", "base_price": 4500},
+        {"id": 3, "airline": "SpiceJet", "origin": "BLR", "destination": "MUM", "date": "2025-11-08", "base_price": 3500},
+    ]
+
+    for f in data:
+        # Create seat map: 4 rows × 4 seats = 16 total
+        f["seats"] = {f"{r}{c}": True for r in range(1, 5) for c in ["A", "B", "C", "D"]}
+        flights[f["id"]] = f
+        flight_locks[f["id"]] = threading.Lock()
+
+create_sample_flights()
+
+#Helper Functions
+def parse_date(d: str) -> date:
+    return datetime.strptime(d, "%Y-%m-%d").date()
+
+def seats_available(flight: dict) -> int:
+    return sum(1 for v in flight["seats"].values() if v)
+
+def generate_pnr() -> str:
+    return uuid.uuid4().hex[:8].upper()
+
+def dynamic_price(flight: dict) -> float:
+    """Simple price formula: increases as seats fill or flight date nears."""
+    base = flight["base_price"]
+    rem = seats_available(flight)
+    total = len(flight["seats"])
+    rem_pct = rem / total
+
+    # Seat factor
+    if rem_pct <= 0.2:
+        seat_factor = 1.5
+    elif rem_pct <= 0.5:
+        seat_factor = 1.2
+    else:
+        seat_factor = 1.0
+
+    # Time factor
+    try:
+        days_left = (parse_date(flight["date"]) - datetime.now().date()).days
+    except Exception:
+        days_left = 30
+    if days_left <= 3:
+        time_factor = 1.6
+    elif days_left <= 10:
+        time_factor = 1.2
+    else:
+        time_factor = 1.0
+
+    # Demand randomness
+    demand_factor = 1.0 + random.uniform(-0.05, 0.15)
+
+    price = base * seat_factor * time_factor * demand_factor
+    return round(price / 10) * 10
+
+# Pydantic Models
+class Passenger(BaseModel):
+    name: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
+class CreateBooking(BaseModel):
+    flight_id: int
+    seat: str
+    passenger: Passenger
+    simulate_payment_fail: Optional[bool] = Field(False, description="Force payment fail for testing")
+
+class BookingOut(BaseModel):
+    pnr: str
+    flight_id: int
+    seat: str
+    passenger: Passenger
+    price: float
+    status: str
+    created_at: str
+
+class FlightOut(BaseModel):
+    id: int
+    airline: str
+    origin: str
+    destination: str
+    date: str
+    base_price: float
+    available_seats: int
+    dynamic_price: float
+
+#Endpoints
+
+@app.get("/")
+def root():
+    return {"message": "Flight Booking Simulator API is running!"}
+
+# List all flights with dynamic price
+@app.get("/flights", response_model=List[FlightOut])
+def list_flights():
+    result = []
+    for f in flights.values():
+        result.append(
+            FlightOut(
+                id=f["id"],
+                airline=f["airline"],
+                origin=f["origin"],
+                destination=f["destination"],
+                date=f["date"],
+                base_price=f["base_price"],
+                available_seats=seats_available(f),
+                dynamic_price=dynamic_price(f)
+            )
+        )
+    return result
+
+# View available seats for a flight
+@app.get("/flights/{flight_id}/seats")
+def get_seat_map(flight_id: int):
+    flight = flights.get(flight_id)
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+    return {"seats": flight["seats"]}
+
+# Create booking
+@app.post("/bookings", response_model=BookingOut)
+def create_booking(req: CreateBooking):
+    flight = flights.get(req.flight_id)
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+
+    with flight_locks[req.flight_id]:
+        # Check seat availability
+        if req.seat not in flight["seats"]:
+            raise HTTPException(status_code=400, detail="Invalid seat")
+        if not flight["seats"][req.seat]:
+            raise HTTPException(status_code=400, detail="Seat already booked")
+
+        price = dynamic_price(flight)
+        pnr = generate_pnr()
+
+        # Simulate payment success/fail
+        payment_success = not req.simulate_payment_fail and random.random() > 0.1
+
+        if payment_success:
+            flight["seats"][req.seat] = False
+            status = "CONFIRMED"
+        else:
+            status = "FAILED"
+
+        booking = {
+            "pnr": pnr,
+            "flight_id": req.flight_id,
+            "seat": req.seat,
+            "passenger": req.passenger.model_dump(),
+            "price": price,
+            "status": status,
+            "created_at": datetime.utcnow().isoformat()
+        }
+
+        bookings[pnr] = booking
+        return booking
+
+# Cancel booking and restore seat
+@app.delete("/bookings/{pnr}")
+def cancel_booking(pnr: str):
+    booking = bookings.get(pnr)
+    if not booking:
+        raise HTTPException(status_code=404, detail="PNR not found")
+    if booking["status"] != "CONFIRMED":
+        raise HTTPException(status_code=400, detail="Cannot cancel non-confirmed booking")
+
+    flight = flights.get(booking["flight_id"])
+    if not flight:
+        raise HTTPException(status_code=404, detail="Flight not found")
+
+    with flight_locks[booking["flight_id"]]:
+        flight["seats"][booking["seat"]] = True
+
+    booking["status"] = "CANCELLED"
+    return {"message": f"Booking {pnr} cancelled successfully."}
+
+# Retrieve booking history
+@app.get("/bookings", response_model=List[BookingOut])
+def booking_history():
+    return list(bookings.values())
