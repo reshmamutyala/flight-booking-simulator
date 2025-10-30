@@ -10,7 +10,7 @@ import random
 import uuid
 import os
 
-# added frontend setup
+# connected frontend to backend
 
 
 app = FastAPI(title="Flight Booking Simulator with Dynamic Pricing")
