@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Booking Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background: #f5f8fc;
+    }
+    header {
+      background: #004aad;
+      color: white;
+      padding: 15px;
+      text-align: center;
+      font-size: 1.4em;
+      font-weight: bold;
+    }
+    .container {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px auto;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h2 { color: #004aad; margin-top: 0; }
+    input, select, button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #004aad;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background: #003080; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #004aad;
+      color: white;
+    }
+    .hidden { display: none; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+
+<header>✈️ Flight Booking Simulator with Dynamic Pricing</header>
+
+<div class="container">
+  <h2>Search Flights</h2>
+  <div>
+    <input type="text" id="origin" placeholder="Origin (e.g. HYD)" />
+    <input type="text" id="destination" placeholder="Destination (e.g. DEL)" />
+    <input type="date" id="date" />
+    <button onclick="searchFlights()">Search</button>
+  </div>
+
+  <table id="flightsTable" class="hidden">
+    <thead>
+      <tr><th>Airline</th><th>From</th><th>To</th><th>Date</th><th>Dynamic Price</th><th>Seats Left</th><th>Action</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="bookingSection" class="hidden">
+    <h2>Book Your Seat</h2>
+    <p><b id="selectedFlight"></b></p>
+    <label>Seat:</label> <input id="seat" placeholder="e.g. 1A" /><br>
+    <label>Name:</label> <input id="name" placeholder="Passenger Name" /><br>
+    <label>Email:</label> <input id="email" placeholder="Email" /><br>
+    <label>Phone:</label> <input id="phone" placeholder="Phone" /><br>
+    <button onclick="confirmBooking()">Confirm Booking</button>
+    <p id="bookingMessage"></p>
+  </div>
+
+  <div id="receiptSection" class="hidden">
+    <h2>Booking Receipt</h2>
+    <pre id="receiptData"></pre>
+    <button onclick="downloadJSON()">Download JSON</button>
+  </div>
+</div>
+
+<script>
+const API_BASE = "http://127.0.0.1:8000";
+let selectedFlightId = null;
+let lastBooking = null;
+
+// --- Search Flights ---
+async function searchFlights() {
+  const res = await fetch(`${API_BASE}/flights`);
+  const flights = await res.json();
+  const tbody = document.querySelector("#flightsTable tbody");
+  tbody.innerHTML = "";
+  document.getElementById("flightsTable").classList.remove("hidden");
+
+  flights.forEach(f => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${f.airline}</td>
+      <td>${f.origin}</td>
+      <td>${f.destination}</td>
+      <td>${f.date}</td>
+      <td>₹${f.dynamic_price}</td>
+      <td>${f.available_seats}</td>
+      <td><button onclick="selectFlight(${f.id}, '${f.airline}')">Book</button></td>`;
+    tbody.appendChild(row);
+  });
+}
+
+function selectFlight(id, airline) {
+  selectedFlightId = id;
+  document.getElementById("selectedFlight").innerText = `Selected: ${airline} (ID: ${id})`;
+  document.getElementById("bookingSection").classList.remove("hidden");
+}
+
+// --- Confirm Booking ---
+async function confirmBooking() {
+  const data = {
+    flight_id: selectedFlightId,
+    seat: document.getElementById("seat").value,
+    passenger: {
+      name: document.getElementById("name").value,
+      email: document.getElementById("email").value,
+      phone: document.getElementById("phone").value
+    }
+  };
+
+  const res = await fetch(`${API_BASE}/bookings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+  const msg = document.getElementById("bookingMessage");
+
+  if (res.ok) {
+    msg.textContent = `Booking ${result.status}: PNR ${result.pnr}`;
+    msg.className = "success";
+    lastBooking = result;
+    showReceipt(result);
+  } else {
+    msg.textContent = result.detail || "Booking failed.";
+    msg.className = "error";
+  }
+}
+
+function showReceipt(booking) {
+  document.getElementById("receiptSection").classList.remove("hidden");
+  document.getElementById("receiptData").textContent = JSON.stringify(booking, null, 2);
+}
+
+function downloadJSON() {
+  if (!lastBooking) return;
+  const blob = new Blob([JSON.stringify(lastBooking, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `booking_${lastBooking.pnr}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
