@@ -1,39 +1,68 @@
-# Project Overview
+# 🧩 Introduction
 
-Simulates a real-world airline booking system.
+The Flight Booking Simulator with Dynamic Pricing is a web-based application that simulates a real-world airline booking system. It allows users to search for flights, view available seats, book tickets, and experience real-time fare adjustments based on demand, seat availability, and time before departure. The project demonstrates how modern airlines use dynamic pricing algorithms to optimize revenue while giving users interactive booking control.
 
-Implements dynamic pricing based on seat availability, time to departure, and demand.
+# 💡 Overview
 
-Developed using Python and FastAPI with MySQL for data storage.
+This simulator integrates a FastAPI backend with a responsive frontend built using HTML, CSS, and JavaScript.
+The backend handles:
 
-Demonstrates practical knowledge of web development, RESTful APIs, and algorithmic pricing.
+Flight management
 
-# Key Features
+Seat allocation
 
-Search Flights: Find flights by origin, destination, and travel date.
+Dynamic price computation
 
-Book Flights: Complete bookings with updated pricing.
+Booking and cancellation workflows
 
-Dynamic Pricing Engine: Real-time fare adjustments for realistic simulation.
+Transaction simulation and PNR generation
 
-RESTful API Endpoints: Retrieve, search, and manage flight data programmatically.
+The frontend provides a user-friendly interface for flight search, seat selection, and ticket booking, reflecting live price changes from the backend APIs.
 
-Simulation of Airline Behavior: Mimics pricing and booking strategies used in the airline industry.
-# backend 
-my backend file consists of two milestones 
-1. Build REST APIs using Flask/FastAPI/Django for:
- • Retrieving all flights
- • Searching by origin, destination, and date
-2. Implement input validation and sorting (by price or duration)
-3. Simulate external airline schedule APIs
-4. Design dynamic pricing logic considering:
- • Remaining seat percentage
- • Time until departure
- • Simulated demand level
- • Base fare and pricing tiers
-5. Integrate dynamic pricing engine into flight search API
-6. Build background process to simulate demand/availability changes
-7. Store fare history for tracking changes
+# 🌍 Applications
 
-the above mentioned are the tasks done in milestone 2
-where my milestone 3 consists of booking workflow and transaction management
+Airline Revenue Management – Demonstrates how airlines dynamically adjust ticket prices based on real-time demand and capacity.
+
+Educational Tool – Useful for students learning backend APIs, database design, and pricing strategies.
+
+Simulation Platform – Can be extended to study customer behavior, booking trends, and demand prediction.
+
+Prototype for Travel Startups – Forms a base for building scalable flight booking or reservation platforms.
+
+# ⚙️ Challenges Faced
+
+Concurrency Handling: Ensuring two users cannot book the same seat simultaneously.
+
+Dynamic Pricing Accuracy: Designing a fair yet profitable pricing model that adapts to both seat availability and time remaining.
+
+Frontend-Backend Integration: Connecting asynchronous APIs securely and handling CORS issues.
+
+Data Consistency: Maintaining seat availability and booking history without a permanent database.
+
+# 🧠 Solutions Implemented
+
+Used threading locks to manage concurrency and prevent race conditions during seat booking.
+
+Built a dynamic pricing algorithm that updates fares using seat percentage and days to departure.
+
+Added CORS middleware in FastAPI to enable smooth API communication with the frontend.
+
+Implemented in-memory data storage for flights and bookings to simplify simulation while preserving transaction logic.
+
+Designed an intuitive frontend that fetches live flight data and displays updated prices instantly.
+
+# 🚀 Future Scope
+
+Integration with a real database (e.g., PostgreSQL or MySQL) for persistent booking records.
+
+Development of an admin dashboard for managing flights and tracking revenue analytics.
+
+Use of machine learning models to predict demand and optimize ticket prices automatically.
+
+Addition of payment gateway simulation for a more realistic end-to-end experience.
+
+Expansion into multi-city flight booking and user authentication for secure access.
+
+# 🏁 Conclusion
+
+The Flight Booking Simulator with Dynamic Pricing successfully models the essential operations of a modern airline booking system. It combines API-driven backend design, responsive frontend development, and intelligent pricing algorithms into a cohesive project. The simulator not only showcases technical proficiency but also provides a foundation for building scalable, real-world travel and booking applications.
